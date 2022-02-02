@@ -1,0 +1,91 @@
+
+env:
+  GAME_TO_PLAY: "WIZARD"  # SPADES, HELL, WIZARD
+  SUIT: 4
+  CARDS_PER_SUIT: 1
+  PLAYERS: 2
+  TRICKS: 2
+  JESTERS: 0
+  WIZARDS: 1
+  GT_DECK: 0
+  GT_HAND: 1
+  SEED: 123
+  NORMALIZE_REWARD: True
+  HELP: True
+
+agent:
+  PLAYER_TYPE: "DQN"  # HISTORY, DQN, A2C, PPO, MODEL, RANDOM, RULE, HUMAN, FIX, CUSTOM
+  TRAINING_MODE: True
+  READ_CHECKPOINTS: False
+  WRITE_CHECKPOINTS: True
+  HISTORY_PREPROCESSING: False  # If true, use hidden cell from LSTM as additional input for DQN network
+  BATCHES: 100
+  ITERATIONS_PER_BATCH: 100
+  BATCHES_TOURNAMENT: 1
+  ITERATIONS_PER_BATCH_TOURNAMENT: 10000
+  EVALUATION_GAMES: 1
+  GAMMA: 1
+  REPLAY_START: 0.1 # Start training after buffer is filled to 10%
+  REPLAY_FULL: 0.3 # Buffer should be full after less than 30% of total experiences
+  MASTER_INDEX: 0
+
+dqn:
+  LR_BIDDING: 0.005
+  LR_PLAYING: 0.005
+  BATCH_SIZE_BIDDING: 1024
+  BATCH_SIZE_PLAYING: 1024
+  MAX_REPLAY_SIZE_BIDDING: 300000
+  MAX_REPLAY_SIZE_PLAYING: 600000
+  HIDDEN_BIDDING: [100,100,50]
+  HIDDEN_PLAYING: [200,200,100]
+  TRAIN_INTERVAL: 10  # Games to skip between updates of playing / bidding
+  COPY_TARGET: 20  # Games to skip between copy weights from trained net to target net
+  TAU_TARGET: 0.1  # If None, overwrite network weights completely
+  eps:
+    STRATEGY_BIDDING: "exponential"  # type of decay: constant, linear, exponential
+    STRATEGY_PLAYING: "exponential"
+    START: 1.0  # start with high epsilon = exploration (1.0 = random strategy)
+    FINAL: 0.01  # end with low epsilon = exploitation (improve convergence)
+    SHARE: 0.9  # percentage of experience until final epsilon is reached
+  DOUBLE: False  # Double DQN
+  DUELING: False  # Dueling Architecture
+  PER: False  # Prioritized Replay Buffer
+
+hist:
+  LR: 0.005
+  BATCH_SIZE: 64
+  MAX_REPLAY_SIZE: 10000
+  HIDDEN_SIZE: 150
+  TRAIN_INTERVAL: 10
+  HIDDEN_SIZE_SHARE: 0.8  # currently not used
+
+model:
+  LR: 0.001
+  BATCH_SIZE: 1024
+  MAX_REPLAY_SIZE: 600000
+  HIDDEN: [200,200,300]
+  TRAIN_INTERVAL: 10
+  SEARCH: True
+  CERTAINTY: 0.0
+  SAMPLING_TYPE: "UNIFORM"  # TRUTH, UNIFORM, SAMPLE
+  SAMPLES_TO_GENERATE: 1  # only relevant for SAMPLING_TYPE = SAMPLE
+  SIMULATIONS_TO_RUN: 1
+  RANDOM_POLICY: False  # True = use random rollout policy, False = use DQN rollout policy
+
+a2c:
+  LR_ACTOR_BIDDING: 0.001
+  LR_CRITIC_BIDDING: 0.005
+  ENTROPY_BIDDING: 0.1
+  TRAJECTORY_SIZE_BIDDING: 256
+  LR_ACTOR_PLAYING: 0.0005
+  LR_CRITIC_PLAYING: 0.005
+  ENTROPY_PLAYING: 0.05
+  TRAJECTORY_SIZE_PLAYING: 256
+
+ppo:
+  LR_ACTOR: 0.0001
+  LR_CRITIC: 0.001
+  BATCH_SIZE: 32
+  GAE_LAMBDA: 0.95
+  CLAMP: 0.2
+  EPOCHS: 3
