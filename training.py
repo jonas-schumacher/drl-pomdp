@@ -324,8 +324,8 @@ if __name__ == '__main__':
         logger.info("{}: {}".format(entry, hps[entry]))
 
     if hps['agent']['TRAINING_MODE']:
-        from tensorboardX import SummaryWriter
-        writer = SummaryWriter(logdir=os.path.join('runs', current_time + "-" + experiment_name))
+        from torch.utils.tensorboard import SummaryWriter
+        writer = SummaryWriter(os.path.join('runs', current_time + "-" + experiment_name))
         players[MASTER].give_writing_access(writer)
         score_batch = play(num_batches=hps['agent']['BATCHES'],
                            num_games_per_batch=hps['agent']['ITERATIONS_PER_BATCH'],
