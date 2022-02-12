@@ -11,11 +11,13 @@ from environment import Wizard, Spades, OhHell
 from agent_dqn import DQNPlayer, ModelPlayer
 from agent_history import HistoryPlayer
 
-from policy_gradient.agent_pg import A2CPlayer, PPOPlayer
-
 
 def manipulate_hps(h):
-    # Calculate and add variables which depend on other variables
+    """
+    Calculate and add variables which depend on other variables
+    :param h: hyperparameters
+    :return: modified hyperparameters
+    """
     S = h['env']['SUIT']
     C = h['env']['CARDS_PER_SUIT']
     P = h['env']['PLAYERS']
@@ -26,17 +28,25 @@ def manipulate_hps(h):
     else:
         CARDS = h['env']['CARDS'] = S * C
     CHECKPOINT_NAME = h['env']['CHECKPOINT'] = \
-        str(h['env']['GAME_TO_PLAY']) + "-" + str(S) + "-" + str(C) + "-" + str(P) + "-" + str(T)
+        str(h['env']['GAME_TO_PLAY']) + "-" + str(S) + "-" + str(C) + "-" + str(P) + "-" + str(T) + "-" + str(hps['agent']['ITERATIONS_PER_BATCH'])
     h['hist']['CHECKPOINT'] = "checkpoints/hist-" + CHECKPOINT_NAME
     h['dqn']['CHECKPOINT'] = "checkpoints/dqn-" + CHECKPOINT_NAME
     h['dqn']['CHECKPOINT_HIST'] = "checkpoints/dqn-hist-" + CHECKPOINT_NAME
-    h['a2c']['CHECKPOINT'] = "checkpoints/a2c-" + CHECKPOINT_NAME
-    h['ppo']['CHECKPOINT'] = "checkpoints/ppo-" + CHECKPOINT_NAME
     h['model']['CHECKPOINT'] = "checkpoints/model-" + CHECKPOINT_NAME
+    h['model']['CHECKPOINT_HIST'] = "checkpoints/model-hist-" + CHECKPOINT_NAME
 
     h['env']['GT_TRUMP'] = h['env']['GT_HAND'] + P
     h['env']['GT_PLAYED'] = h['env']['GT_TRUMP'] + 1
     h['env']['GT_SIZE'] = 2 * P + 2
+
+    # Player type specific hyperparameters:
+    h['agent']['HISTORY_PREPROCESSING'] = True if h['agent']['PLAYER_TYPE'] in ['DQN_HIST', 'MODEL_HIST'] else False
+    h['agent']['PERFORM_TOURNAMENT'] = False if h['agent']['PLAYER_TYPE'] in ['HISTORY', 'HUMAN'] else True
+    if h['agent']['PLAYER_TYPE'] in ['RANDOM', 'RULE']:
+        h['agent']['TRAINING_MODE'] = False
+    if h['agent']['PLAYER_TYPE'] in ['HUMAN']:
+        h['agent']['TRAINING_MODE'] = False
+        h['agent']['READ_CHECKPOINTS'] = True
 
     # Start training after 25% of replay buffer filling (instead of 10%), if checkpoints are read
     if h['agent']['READ_CHECKPOINTS']:
@@ -46,39 +56,29 @@ def manipulate_hps(h):
 
     h['hist']['INPUT'] = CARDS + P + (S + 1)
     h['hist']['OUTPUT'] = CARDS * P + S * P + P
-    # h['hist']['HIDDEN_SIZE'] = int(h['hist']['HIDDEN_SIZE_SHARE'] * h['hist']['OUTPUT'])
     h['hist']['REPLAY_SIZE'] = min(h['hist']['MAX_REPLAY_SIZE'],
                                    int(h['agent']['REPLAY_FULL'] * GAMES))  # there is one sample per game
     h['hist']['REPLAY_START_SIZE'] = max(2 * h['hist']['BATCH_SIZE'],
                                          int(h['agent']['REPLAY_START'] * h['hist']['REPLAY_SIZE']))
     h['dqn']['INPUT_BIDDING'] = CARDS + P + S + (P - 1) * (T + 1)
     h['dqn']['OUTPUT_BIDDING'] = T + 1
-    # h['dqn']['HIDDEN_BIDDING'] = [h['dqn']['BIDDING_INPUT'],
-    #                               h['dqn']['BIDDING_INPUT'],
-    #                               h['dqn']['BIDDING_INPUT'] // 2]
     h['dqn']['REPLAY_SIZE_BIDDING'] = min(h['dqn']['MAX_REPLAY_SIZE_BIDDING'],
                                           int(h['agent']['REPLAY_FULL'] * GAMES * P))
     h['dqn']['REPLAY_START_SIZE_BIDDING'] = max(2 * h['dqn']['BATCH_SIZE_BIDDING'],
                                                 int(h['agent']['REPLAY_START'] * h['dqn'][
-                                                      'REPLAY_SIZE_BIDDING']))
-    h['dqn']['INPUT_PLAYING'] = 2*CARDS + 2 * P + 2 * S + 2 * P * (T + 1)
+                                                    'REPLAY_SIZE_BIDDING']))
+    h['dqn']['INPUT_PLAYING'] = 2 * CARDS + 2 * P + 2 * S + 2 * P * (T + 1)
     h['dqn']['OUTPUT_PLAYING'] = CARDS
-    # h['dqn']['HIDDEN_PLAYING'] = [h['dqn']['PLAYING_INPUT'],
-    #                               h['dqn']['PLAYING_INPUT'],
-    #                               h['dqn']['PLAYING_INPUT'] // 2]
     h['dqn']['REPLAY_SIZE_PLAYING'] = min(h['dqn']['MAX_REPLAY_SIZE_PLAYING'],
                                           int(h['agent']['REPLAY_FULL'] * GAMES * P * T))
     h['dqn']['REPLAY_START_SIZE_PLAYING'] = max(2 * h['dqn']['BATCH_SIZE_PLAYING'],
                                                 int(h['agent']['REPLAY_START'] * h['dqn'][
-                                                      'REPLAY_SIZE_PLAYING']))
+                                                    'REPLAY_SIZE_PLAYING']))
 
     h['model']['INPUT'] = h['dqn']['INPUT_PLAYING'] + h['hist']['HIDDEN_SIZE']
     h['model']['OUTPUT'] = CARDS * (2 * P + 2)
-    # h['model']['HIDDEN'] = [2 * h['dqn']['PLAYING_INPUT'],
-    #                         2 * h['dqn']['PLAYING_INPUT'],
-    #                         h['model']['OUTPUT']]
     h['model']['REPLAY_SIZE'] = min(h['model']['MAX_REPLAY_SIZE'],
-                                   int(h['agent']['REPLAY_FULL'] * GAMES * P * T))  # same as for playing
+                                    int(h['agent']['REPLAY_FULL'] * GAMES * P * T))  # same as for playing
     h['model']['REPLAY_START_SIZE'] = max(2 * h['model']['BATCH_SIZE'],
                                           int(h['agent']['REPLAY_START'] * h['model']['REPLAY_SIZE']))
     if h['agent']['TRAINING_MODE']:
@@ -139,104 +139,66 @@ def play(num_batches, num_games_per_batch, fix_start_player, train):
 
 
 def create_players():
-    if PLAYER_TYPE == "DQN":
-        algo = "dqn-hist" if hps['agent']['HISTORY_PREPROCESSING'] else "dqn"
-        players = [DQNPlayer(MASTER, PLAYER_NAMES[MASTER], hps, None)]
-        for i in range(1, NUM_PLAYERS):
-            players.append(DQNPlayer(i, PLAYER_NAMES[i], hps, players[MASTER]))
-            players[i].set_previous_player(players[i - 1])
-    elif PLAYER_TYPE == "A2C":
-        algo = "a2c"
-        players = [A2CPlayer(MASTER, PLAYER_NAMES[MASTER], hps, None)]
-        for i in range(1, NUM_PLAYERS):
-            players.append(A2CPlayer(i, PLAYER_NAMES[i], hps, players[MASTER]))
-            players[i].set_previous_player(players[i - 1])
-    elif PLAYER_TYPE == "PPO":
-        algo = "ppo"
-        players = [PPOPlayer(MASTER, PLAYER_NAMES[MASTER], hps, None)]
-        for i in range(1, NUM_PLAYERS):
-            players.append(PPOPlayer(i, PLAYER_NAMES[i], hps, players[MASTER]))
-            players[i].set_previous_player(players[i - 1])
-    elif PLAYER_TYPE == "MODEL":
-        algo = "model"
-        players = [ModelPlayer(MASTER, PLAYER_NAMES[MASTER], hps, None)]
-        for i in range(1, NUM_PLAYERS):
-            players.append(ModelPlayer(i, PLAYER_NAMES[i], hps, players[MASTER]))
-            players[i].set_previous_player(players[i - 1])
-    elif PLAYER_TYPE == "HISTORY":
-        algo = "hist"
-        players = [HistoryPlayer(MASTER, PLAYER_NAMES[MASTER], hps, None)]
-        for i in range(1, NUM_PLAYERS):
-            players.append(HistoryPlayer(i, PLAYER_NAMES[i], hps, players[MASTER]))
-            players[i].set_previous_player(players[i - 1])
-    elif PLAYER_TYPE == "RULE":
-        algo = "rule"
-        players = [RuleBasedPlayer(MASTER, PLAYER_NAMES[MASTER], hps, None)]
-        for i in range(1, NUM_PLAYERS):
-            players.append(RuleBasedPlayer(i, PLAYER_NAMES[i], hps, None))
-            players[i].set_previous_player(players[i - 1])
-    elif PLAYER_TYPE == "RANDOM":
+    if PLAYER_TYPE == "RANDOM":  # all players play randomly
         algo = "random"
         players = [RandomPlayer(MASTER, PLAYER_NAMES[MASTER], hps, None)]
         for i in range(1, NUM_PLAYERS):
             players.append(RandomPlayer(i, PLAYER_NAMES[i], hps, None))
             players[i].set_previous_player(players[i - 1])
-    elif PLAYER_TYPE == "HUMAN":
+    elif PLAYER_TYPE == "RULE":  # all players use rule-based playing
+        algo = "rule"
+        players = [RuleBasedPlayer(MASTER, PLAYER_NAMES[MASTER], hps, None)]
+        for i in range(1, NUM_PLAYERS):
+            players.append(RuleBasedPlayer(i, PLAYER_NAMES[i], hps, None))
+            players[i].set_previous_player(players[i - 1])
+    elif PLAYER_TYPE == "HISTORY":  # all players learn the history and play randomly
+        algo = "hist"
+        players = [HistoryPlayer(MASTER, PLAYER_NAMES[MASTER], hps, None)]
+        for i in range(1, NUM_PLAYERS):
+            players.append(HistoryPlayer(i, PLAYER_NAMES[i], hps, players[MASTER]))
+            players[i].set_previous_player(players[i - 1])
+    elif PLAYER_TYPE == "DQN":  # all players are regular DQN agents
+        algo = "dqn"
+        players = [DQNPlayer(MASTER, PLAYER_NAMES[MASTER], hps, None)]
+        for i in range(1, NUM_PLAYERS):
+            players.append(DQNPlayer(i, PLAYER_NAMES[i], hps, players[MASTER]))
+            players[i].set_previous_player(players[i - 1])
+    elif PLAYER_TYPE == "DQN_HIST":  # all players DQN agents with additional historic input
+        algo = "dqn-hist"
+        players = [DQNPlayer(MASTER, PLAYER_NAMES[MASTER], hps, None)]
+        for i in range(1, NUM_PLAYERS):
+            players.append(DQNPlayer(i, PLAYER_NAMES[i], hps, players[MASTER]))
+            players[i].set_previous_player(players[i - 1])
+    elif PLAYER_TYPE == "MODEL":  # all players learn a model of their environment
+        algo = "model"
+        players = [ModelPlayer(MASTER, PLAYER_NAMES[MASTER], hps, None)]
+        for i in range(1, NUM_PLAYERS):
+            players.append(ModelPlayer(i, PLAYER_NAMES[i], hps, players[MASTER]))
+            players[i].set_previous_player(players[i - 1])
+    elif PLAYER_TYPE == "MODEL_HIST":  # players learn a model of their environment
+        algo = "model-hist"
+        players = [ModelPlayer(MASTER, PLAYER_NAMES[MASTER], hps, None)]
+        for i in range(1, NUM_PLAYERS):
+            players.append(ModelPlayer(i, PLAYER_NAMES[i], hps, players[MASTER]))
+            players[i].set_previous_player(players[i - 1])
+    elif PLAYER_TYPE == "HUMAN":  # N-1 regular DQN agents play against 1 human player
         algo = "human"
         players = [DQNPlayer(MASTER, PLAYER_NAMES[MASTER], hps, None)]
         for i in range(1, NUM_PLAYERS - 1):
             players.append(DQNPlayer(i, PLAYER_NAMES[i], hps, players[MASTER]))
             players[i].set_previous_player(players[i - 1])
-        players.append(HumanPlayer(NUM_PLAYERS - 1, PLAYER_NAMES[NUM_PLAYERS - 1], hps,None))
+        players.append(HumanPlayer(NUM_PLAYERS - 1, PLAYER_NAMES[NUM_PLAYERS - 1], hps, None))
         players[NUM_PLAYERS - 1].set_previous_player(players[NUM_PLAYERS - 2])
-    # Put all other players in EVAL mode and only train the master player
-    elif PLAYER_TYPE == "FIX":
-        algo = "fix"
-        players = [DQNPlayer(MASTER, PLAYER_NAMES[MASTER], hps, None)]
-        for i in range(1, NUM_PLAYERS):
-            players.append(DQNPlayer(i, PLAYER_NAMES[i], hps, None))
-            players[i].set_previous_player(players[i - 1])
-            players[i].set_agent_mode(AgentMode.EVAL)
-    elif PLAYER_TYPE == "CUSTOM":
+    elif PLAYER_TYPE == "DQN3_RANDOM1":  # 3 DQN agents play agents 1 random agent
         algo = "custom"
-        players = [ModelPlayer(MASTER, PLAYER_NAMES[MASTER], hps, None)]
-        for i in range(1, NUM_PLAYERS):
+        players = [DQNPlayer(MASTER, PLAYER_NAMES[MASTER], hps, None)]
+        for i in range(1, NUM_PLAYERS - 1):
+            players.append(DQNPlayer(i, PLAYER_NAMES[i], hps, players[MASTER]))
+            players[i].set_previous_player(players[i - 1])
+        for i in range(NUM_PLAYERS - 1, NUM_PLAYERS):
             players.append(RandomPlayer(i, PLAYER_NAMES[i], hps, None))
             players[i].set_previous_player(players[i - 1])
-    elif PLAYER_TYPE == "DQN2_RULE1":
-        algo = "custom"
-        players = [DQNPlayer(MASTER, PLAYER_NAMES[MASTER], hps, None)]
-        for i in range(1, NUM_PLAYERS-1):
-            players.append(DQNPlayer(i, PLAYER_NAMES[i], hps, players[MASTER]))
-            players[i].set_previous_player(players[i - 1])
-        for i in range(NUM_PLAYERS-1, NUM_PLAYERS):
-            players.append(RuleBasedPlayer(i, PLAYER_NAMES[i], hps, None))
-            players[i].set_previous_player(players[i - 1])
-    elif PLAYER_TYPE == "DQN1_RULE2":
-        algo = "custom"
-        players = [DQNPlayer(MASTER, PLAYER_NAMES[MASTER], hps, None)]
-        for i in range(1, 2):
-            players.append(DQNPlayer(i, PLAYER_NAMES[i], hps, players[MASTER]))
-            players[i].set_previous_player(players[i - 1])
-        for i in range(2, NUM_PLAYERS):
-            players.append(RuleBasedPlayer(i, PLAYER_NAMES[i], hps, None))
-            players[i].set_previous_player(players[i - 1])
-    elif PLAYER_TYPE == "DQN0_RULE3":
-        algo = "custom"
-        players = [DQNPlayer(MASTER, PLAYER_NAMES[MASTER], hps, None)]
-        for i in range(1, NUM_PLAYERS):
-            players.append(RuleBasedPlayer(i, PLAYER_NAMES[i], hps, None))
-            players[i].set_previous_player(players[i - 1])
-    elif PLAYER_TYPE == "DQN2_RANDOM1":
-        algo = "custom"
-        players = [DQNPlayer(MASTER, PLAYER_NAMES[MASTER], hps, None)]
-        for i in range(1, NUM_PLAYERS-1):
-            players.append(DQNPlayer(i, PLAYER_NAMES[i], hps, players[MASTER]))
-            players[i].set_previous_player(players[i - 1])
-        for i in range(NUM_PLAYERS-1, NUM_PLAYERS):
-            players.append(RandomPlayer(i, PLAYER_NAMES[i], hps, None))
-            players[i].set_previous_player(players[i - 1])
-    elif PLAYER_TYPE == "DQN1_RANDOM2":
+    elif PLAYER_TYPE == "DQN2_RANDOM2":
         algo = "custom"
         players = [DQNPlayer(MASTER, PLAYER_NAMES[MASTER], hps, None)]
         for i in range(1, 2):
@@ -245,11 +207,35 @@ def create_players():
         for i in range(2, NUM_PLAYERS):
             players.append(RandomPlayer(i, PLAYER_NAMES[i], hps, None))
             players[i].set_previous_player(players[i - 1])
-    elif PLAYER_TYPE == "DQN0_RANDOM3":
+    elif PLAYER_TYPE == "DQN1_RANDOM3":
         algo = "custom"
         players = [DQNPlayer(MASTER, PLAYER_NAMES[MASTER], hps, None)]
         for i in range(1, NUM_PLAYERS):
             players.append(RandomPlayer(i, PLAYER_NAMES[i], hps, None))
+            players[i].set_previous_player(players[i - 1])
+    elif PLAYER_TYPE == "DQN3_RULE1":
+        algo = "custom"
+        players = [DQNPlayer(MASTER, PLAYER_NAMES[MASTER], hps, None)]
+        for i in range(1, NUM_PLAYERS - 1):
+            players.append(DQNPlayer(i, PLAYER_NAMES[i], hps, players[MASTER]))
+            players[i].set_previous_player(players[i - 1])
+        for i in range(NUM_PLAYERS - 1, NUM_PLAYERS):
+            players.append(RuleBasedPlayer(i, PLAYER_NAMES[i], hps, None))
+            players[i].set_previous_player(players[i - 1])
+    elif PLAYER_TYPE == "DQN2_RULE2":
+        algo = "custom"
+        players = [DQNPlayer(MASTER, PLAYER_NAMES[MASTER], hps, None)]
+        for i in range(1, 2):
+            players.append(DQNPlayer(i, PLAYER_NAMES[i], hps, players[MASTER]))
+            players[i].set_previous_player(players[i - 1])
+        for i in range(2, NUM_PLAYERS):
+            players.append(RuleBasedPlayer(i, PLAYER_NAMES[i], hps, None))
+            players[i].set_previous_player(players[i - 1])
+    elif PLAYER_TYPE == "DQN1_RULE3":
+        algo = "custom"
+        players = [DQNPlayer(MASTER, PLAYER_NAMES[MASTER], hps, None)]
+        for i in range(1, NUM_PLAYERS):
+            players.append(RuleBasedPlayer(i, PLAYER_NAMES[i], hps, None))
             players[i].set_previous_player(players[i - 1])
     else:
         raise ValueError('This player type is unknown.')
@@ -274,7 +260,6 @@ if __name__ == '__main__':
     PLAYER_NAMES = ['A', 'B', 'C', 'D', 'E', 'F']
     PLOT_COLORS = ['black', 'tab:red', 'tab:blue', 'tab:green', 'tab:orange', 'tab:purple']
     SMOOTHING_WINDOW_LENGTH = 10
-    PERFORM_TOURNAMENT = False if hps['agent']['PLAYER_TYPE'] == "HISTORY" else True
 
     # Extract relevant hps:
     NUM_TRICKS = hps['env']['TRICKS']
@@ -296,8 +281,7 @@ if __name__ == '__main__':
     players, algo = create_players()
 
     env.set_players(players)
-
-    experiment_name = algo + "-" + hps['env']['CHECKPOINT'] + "-" + str(hps['agent']['ITERATIONS_PER_BATCH'])
+    experiment_name = algo + "-" + hps['env']['CHECKPOINT']
     current_time = datetime.now().strftime('%Y%m%d-%H%M%S')
 
     if not os.path.exists("runs"):
@@ -325,6 +309,7 @@ if __name__ == '__main__':
 
     if hps['agent']['TRAINING_MODE']:
         from torch.utils.tensorboard import SummaryWriter
+
         writer = SummaryWriter(os.path.join('runs', current_time + "-" + experiment_name))
         players[MASTER].give_writing_access(writer)
         score_batch = play(num_batches=hps['agent']['BATCHES'],
@@ -378,7 +363,7 @@ if __name__ == '__main__':
             plt.ylabel(labels[data_index])
             plt.legend()
             plt.show()
-            fig.savefig("results/" + hps['env']['CHECKPOINT'] + "-" + save_label[data_index] + "-" + current_time)
+            fig.savefig("results/" + experiment_name + "-" + current_time + "-" + save_label[data_index])
 
     # Run 3 game per player in play mode with print_statements
     env.set_print_statements(True)
@@ -390,7 +375,7 @@ if __name__ == '__main__':
     env.set_print_statements(False)
 
     # Perform a tournament between the trained players using fixed starting positions
-    if PERFORM_TOURNAMENT:
+    if hps['agent']['PERFORM_TOURNAMENT']:
         for p in players:
             p.set_agent_mode(AgentMode.EVAL)
         for index in range(0, -NUM_PLAYERS, -1):

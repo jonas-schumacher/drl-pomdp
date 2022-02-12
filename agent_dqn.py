@@ -562,7 +562,10 @@ class ModelPlayer(DQNPlayer):
 
     def load_checkpoint_model(self):
         if self.master is None:
-            checkpoint = torch.load(self.hps['model']['CHECKPOINT'] + ".pt")
+            if self.hps['agent']['HISTORY_PREPROCESSING']:
+                checkpoint = torch.load(self.hps['model']['CHECKPOINT_HIST'] + ".pt")
+            else:
+                checkpoint = torch.load(self.hps['model']['CHECKPOINT'] + ".pt")
             self.estimator.load_state_dict(checkpoint['model'])
             self.estimator_opt.load_state_dict(checkpoint['model_opt'])
 
@@ -570,7 +573,11 @@ class ModelPlayer(DQNPlayer):
         assert self.master is None
         checkpoint = {'model': self.estimator.state_dict(),
                       'model_opt': self.estimator_opt.state_dict()}
-        torch.save(checkpoint, self.hps['model']['CHECKPOINT'] + "-" + current_time + ".pt")
+        if self.hps['agent']['HISTORY_PREPROCESSING']:
+            torch.save(checkpoint, self.hps['model']['CHECKPOINT_HIST'] + "-" + current_time + ".pt")
+        else:
+            torch.save(checkpoint, self.hps['model']['CHECKPOINT'] + "-" + current_time + ".pt")
+
 
     def playing(self, current_trick, pos_in_trick, pos_in_bidding, playable_cards, action_mask,
                 trump_suit_index, follow_suit, bids, tricks, history, current_best_card):
