@@ -28,7 +28,7 @@ def manipulate_hps(h):
     else:
         CARDS = h['env']['CARDS'] = S * C
     CHECKPOINT_NAME = h['env']['CHECKPOINT'] = \
-        str(h['env']['GAME_TO_PLAY']) + "-" + str(S) + "-" + str(C) + "-" + str(P) + "-" + str(T) + "-" + str(hps['agent']['ITERATIONS_PER_BATCH'])
+        str(h['env']['GAME_TO_PLAY']) + "-" + str(S) + "-" + str(C) + "-" + str(P) + "-" + str(T)
     h['hist']['CHECKPOINT'] = "checkpoints/hist-" + CHECKPOINT_NAME
     h['dqn']['CHECKPOINT'] = "checkpoints/dqn-" + CHECKPOINT_NAME
     h['dqn']['CHECKPOINT_HIST'] = "checkpoints/dqn-hist-" + CHECKPOINT_NAME
