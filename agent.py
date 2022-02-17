@@ -331,6 +331,9 @@ class RuleBasedPlayer(Player):
         # Simply sum up over all cards in the hand
         hand_valuation = np.sum(self.winning_probs[self.hand])
         action = int(np.round(hand_valuation, 0))
+        # ensure action is in correct bound:
+        action = min(action, self.env.num_round)
+        action = max(action, 0)
 
         return action
 
