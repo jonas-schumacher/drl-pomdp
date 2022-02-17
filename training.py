@@ -331,12 +331,16 @@ if __name__ == '__main__':
         for data_index in range(2):
             fig, ax = plt.subplots()  # create a new figure
             for i in range(NUM_PLAYERS):
-                plt.plot(score_batch[:, i, data_index], color=PLOT_COLORS[i], alpha=0.3)
-                score_smoothed = np.convolve(score_batch[:, i, data_index],
-                                             np.ones(SMOOTHING_WINDOW_LENGTH), 'valid') / SMOOTHING_WINDOW_LENGTH
-                score_smoothed = np.concatenate(
-                    (score_batch[:SMOOTHING_WINDOW_LENGTH - 1, i, data_index], score_smoothed))
-                ax.plot(score_smoothed, label="Player " + PLAYER_NAMES[i], color=PLOT_COLORS[i])
+                # Smoothing is only necessary if few games are played
+                if hps['agent']['ITERATIONS_PER_BATCH'] >= 10:
+                    plt.plot(score_batch[:, i, data_index], color=PLOT_COLORS[i], alpha=1.0)
+                else:
+                    plt.plot(score_batch[:, i, data_index], color=PLOT_COLORS[i], alpha=0.3)
+                    score_smoothed = np.convolve(score_batch[:, i, data_index],
+                                                 np.ones(SMOOTHING_WINDOW_LENGTH), 'valid') / SMOOTHING_WINDOW_LENGTH
+                    score_smoothed = np.concatenate(
+                        (score_batch[:SMOOTHING_WINDOW_LENGTH - 1, i, data_index], score_smoothed))
+                    ax.plot(score_smoothed, label="Player " + PLAYER_NAMES[i], color=PLOT_COLORS[i])
             if env.full_deck == NUM_CARDS and NUM_PLAYERS == 4:
                 ax.plot(np.full_like(a=score_batch[:, 0, 0], fill_value=random_reference[data_index]),
                         label="Random",
