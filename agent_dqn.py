@@ -241,6 +241,11 @@ class DQNPlayer(OptimizedPlayer):
             with torch.no_grad():
                 historic_input_sample = torch.tensor(historic_input.reshape((1, 1, -1)), dtype=torch.float32)
                 prediction, hidden_tuple = self.history_net(historic_input_sample, (self.hidden_h, self.hidden_c))
+
+                # input_names = ['Sentence']
+                # output_names = ['yhat']
+                # torch.onnx.export(self.history_net, (historic_input_sample, (self.hidden_h, self.hidden_c)), 'history.onnx', input_names=input_names, output_names=output_names)
+
             self.hidden_h = hidden_tuple[0]
             self.hidden_c = hidden_tuple[1]
 
@@ -345,6 +350,13 @@ class DQNPlayer(OptimizedPlayer):
         raw_values = self.bidding_actor(obs_batch)
         q_values = raw_values.gather(1, action_batch.unsqueeze(-1)).squeeze(-1)
         target_q_values = reward_batch  # Use pure Monte Carlo estimates
+
+        # input_names = ['Sentence']
+        # output_names = ['yhat']
+        # torch.onnx.export(self.bidding_actor, obs_batch, 'bidding.onnx', input_names=input_names, output_names=output_names)
+
+        # from torchviz import make_dot
+        # make_dot(raw_values, params=dict(list(self.bidding_actor.named_parameters()))).render("rnn_torchviz", format="png")
 
         # Calculate loss
         if self.hps['dqn']['PER']:
