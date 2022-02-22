@@ -2,11 +2,11 @@
 env:
   GAME_TO_PLAY: "WIZARD"  # SPADES, HELL, WIZARD
   SUIT: 4
-  CARDS_PER_SUIT: 1
-  PLAYERS: 2
-  TRICKS: 2
-  JESTERS: 0
-  WIZARDS: 1
+  CARDS_PER_SUIT: 13
+  PLAYERS: 4
+  TRICKS: 3
+  JESTERS: 4
+  WIZARDS: 4
   GT_DECK: 0
   GT_HAND: 1
   SEED: 123
@@ -15,12 +15,12 @@ env:
 agent:
   PLAYER_TYPE: "DQN"  # RANDOM, RULE, HISTORY, DQN, DQN_HIST, MODEL, MODEL_HIST, HUMAN
   TRAINING_MODE: True
-  READ_CHECKPOINTS: False
+  READ_CHECKPOINTS: True
   WRITE_CHECKPOINTS: True
   BATCHES: 100
-  ITERATIONS_PER_BATCH: 100
+  ITERATIONS_PER_BATCH: 4000
   BATCHES_TOURNAMENT: 1
-  ITERATIONS_PER_BATCH_TOURNAMENT: 1000
+  ITERATIONS_PER_BATCH_TOURNAMENT: 10000
   EVALUATION_GAMES: 1
   GAMMA: 1
   REPLAY_START: 0.1 # Start training after buffer is filled to 10%
@@ -42,7 +42,7 @@ dqn:
   eps:
     STRATEGY_BIDDING: "exponential"  # type of decay: constant, linear, exponential
     STRATEGY_PLAYING: "exponential"
-    START: 1.0  # start with high epsilon = exploration (1.0 = random strategy)
+    START: 0.3  # start with high epsilon = exploration (1.0 = random strategy)
     FINAL: 0.01  # end with low epsilon = exploitation (improve convergence)
     SHARE: 0.9  # percentage of experience until final epsilon is reached
   DOUBLE: False  # Double DQN
