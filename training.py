@@ -2,6 +2,7 @@ import os
 import logging
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 import yaml
 import time
 from datetime import datetime
@@ -307,6 +308,9 @@ if __name__ == '__main__':
     for entry in hps:
         logger.info("{}: {}".format(entry, hps[entry]))
 
+    labels = ["Reward", "Accuracy"]
+    column_labels_df = [f"{l} {str(p)}" for l in reversed(labels) for p in np.arange(1, NUM_PLAYERS + 1)]
+
     if hps['agent']['TRAINING_MODE']:
         from torch.utils.tensorboard import SummaryWriter
 
@@ -323,8 +327,6 @@ if __name__ == '__main__':
         players[MASTER].save_checkpoint(current_time=current_time) if hps['agent']['WRITE_CHECKPOINTS'] else None
 
         # Analyze training results
-        labels = ["Reward", "Accuracy"]
-        save_label = ["Reward", "Accuracy"]
         random_reference = [env.random_reward[NUM_TRICKS], 1 / (NUM_TRICKS + 1)]
         rule_reference = [env.rule_based_reward[NUM_TRICKS], env.rule_based_acc[NUM_TRICKS]]
         upper_reference = [env.upper_bound_reward(NUM_TRICKS)[0], 1.0]
@@ -372,7 +374,15 @@ if __name__ == '__main__':
             plt.ylabel(labels[data_index])
             plt.legend()
             plt.show()
-            fig.savefig("results/" + experiment_name + "-" + current_time + "-" + save_label[data_index])
+            fig.savefig("results/" + experiment_name + "-" + current_time + "-" + labels[data_index])
+
+        train_df = pd.DataFrame(index=np.arange(hps['agent']['BATCHES']),
+                                columns=column_labels_df,
+                                dtype=float)
+        train_df.iloc[:, :NUM_PLAYERS] = score_batch[:, :, 1]
+        train_df.iloc[:, NUM_PLAYERS:] = score_batch[:, :, 0]
+        train_df.to_csv(f"results/training-en-{experiment_name}-{current_time}.csv")
+        train_df.to_csv(f"results/training-de-{experiment_name}-{current_time}.csv", sep=";", decimal=",")
 
     # Run 3 game per player in play mode with print_statements
     env.set_print_statements(True)
@@ -387,6 +397,10 @@ if __name__ == '__main__':
     if hps['agent']['PERFORM_TOURNAMENT']:
         for p in players:
             p.set_agent_mode(AgentMode.EVAL)
+
+        eval_df = pd.DataFrame(index=np.arange(NUM_PLAYERS),
+                               columns=column_labels_df,
+                               dtype=float)
         for index in range(0, -NUM_PLAYERS, -1):
             logger.info('----------------------------------------------------------------------')
             player_index = (index + NUM_PLAYERS) % NUM_PLAYERS
@@ -395,6 +409,10 @@ if __name__ == '__main__':
                                num_games_per_batch=hps['agent']['ITERATIONS_PER_BATCH_TOURNAMENT'],
                                fix_start_player=players[player_index],
                                train=False)
+            eval_df.iloc[-index, :NUM_PLAYERS] = score_batch[0, :, 1]
+            eval_df.iloc[-index, NUM_PLAYERS:] = score_batch[0, :, 0]
+        eval_df.to_csv(f"results/evaluation-en-{experiment_name}-{current_time}.csv")
+        eval_df.to_csv(f"results/evaluation-de-{experiment_name}-{current_time}.csv", sep=";", decimal=",")
 
     for p in players:
         p.finish_interaction()
