@@ -425,7 +425,7 @@ class OptimizedPlayer(Player, metaclass=ABCMeta):
         """
         Initialize neural networks using one-hot encoding for PLAYING
         - hand = hand
-        - trick_num = current trick ID
+        - best = best card in current trick
         - pos_trick = position in trick
         - pos_bid = position in bidding
         - trump = trump suit
