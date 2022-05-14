@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 import yaml
 import time
@@ -96,7 +98,7 @@ def play_whole_game(hps, start_player_index):
         env = Wizard(hps_modified)
         env.set_players(players)
 
-        # print(f"Player {players[start_player_index]} starts round {wizard_round}")
+        # logger.info(f"Player {players[start_player_index]} starts round {wizard_round}")
 
         _, _, rewards = env.game_round(num_round=wizard_round,
                                        start_player_round=players[start_player_index])
@@ -104,10 +106,16 @@ def play_whole_game(hps, start_player_index):
 
         start_player_index = (start_player_index + 1) % NUM_PLAYERS
 
-    # print(f"Rewards: {overall_reward}")
-    winner_player_index = np.argmax(overall_reward)
+    # logger.info(f"Rewards: {overall_reward}")
+    winner_indices = np.zeros(NUM_PLAYERS, dtype=int)
+    winners = np.where(overall_reward == max(overall_reward))
+    winner_indices[winners] = 1
 
-    return winner_player_index
+    # if winner_indices.sum() > 1:
+    #     print(overall_reward)
+    #     print(winner_indices)
+
+    return winner_indices
 
 
 if __name__ == '__main__':
@@ -131,21 +139,31 @@ if __name__ == '__main__':
     winning_count = np.zeros(NUM_PLAYERS, dtype=float)
     winning_probs = np.zeros((num_games_to_play, NUM_PLAYERS), dtype=float)
 
-    for game in tqdm(range(num_games_to_play)):
-        start_player_index = (game + 0) % NUM_PLAYERS
-        index_winner = play_whole_game(hps=hps,
-                                       start_player_index=start_player_index)
-        winning_count[index_winner] += 1
-        current_winning_probs = winning_count / (game+1)
+    logger = logging.getLogger("trick")
+    logger.setLevel(logging.INFO)
+    console = logging.StreamHandler()
+    console.setFormatter(logging.Formatter("%(asctime)s: %(message)s", datefmt="%H:%M:%S"))
+    logger.addHandler(console)
+    logger.info("Start calculation:")
+
+    win_count = 0
+
+    for game in range(num_games_to_play):
+        start_player_index = game % NUM_PLAYERS
+        winner_indices = play_whole_game(hps=hps,
+                                         start_player_index=start_player_index)
+        win_count += winner_indices.sum()
+        winning_count += winner_indices
+        current_winning_probs = winning_count / win_count
         winning_probs[game, :] = current_winning_probs
-        if (game + 1) % (num_games_to_play / 10) == 0:
-            print(f"{game + 1}: {np.round(100 * current_winning_probs, decimals=2)}")
-    print(f"Final winning probs: {np.round(100 * winning_count / num_games_to_play, decimals=2)}")
+        if (game + 1) % (num_games_to_play / 100) == 0:
+            logger.info(f"{game + 1} / {win_count}: {np.round(100 * current_winning_probs, decimals=2)}")
+    logger.info(f"Final winning probs: {np.round(100 * winning_count / win_count, decimals=2)}")
 
     fig, ax = plt.subplots()  # create a new figure
     for i in range(NUM_PLAYERS):
         ax.plot(winning_probs[:, i],
-                label="Player " + PLAYER_NAMES[i],
+                label=f"Player {PLAYER_NAMES[i]}",
                 color=PLOT_COLORS[i])
     plt.xlabel(f"Number of Wizard games played")
     plt.ylabel("Average winning probability")
@@ -154,4 +172,4 @@ if __name__ == '__main__':
     fig.savefig(f"results-update-cog/{PLAYER_TYPE}.png")
 
     duration = time.time() - start_time
-    print("Overall time: {} minutes".format(np.round(duration / 60.0, decimals=2)))
+    logger.info("Overall time: {} minutes".format(np.round(duration / 60.0, decimals=2)))
