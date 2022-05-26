@@ -1,4 +1,5 @@
 import collections
+
 import numpy as np
 
 """
@@ -11,6 +12,10 @@ SupervisedExperience = collections.namedtuple('Experience', field_names=['input'
 
 
 class ExperienceBuffer:
+    """
+    Basic Replay Buffer based on a queue data structure
+    """
+
     def __init__(self, capacity, seed):
         self.buffer = collections.deque(maxlen=capacity)
         self.rng = np.random.default_rng(seed)
@@ -28,7 +33,7 @@ class ExperienceBuffer:
 
     def sample_playing(self, batch_size):
         indices = self.rng.choice(len(self.buffer), batch_size, replace=False)
-        obs_batch, action_batch, reward_batch, done_batch, next_obs_batch, mask_batch, next_mask_batch\
+        obs_batch, action_batch, reward_batch, done_batch, next_obs_batch, mask_batch, next_mask_batch \
             = zip(*[self.buffer[idx] for idx in indices])
         return np.array(obs_batch), np.array(action_batch), np.array(reward_batch), np.array(done_batch), \
                np.array(next_obs_batch), np.array(mask_batch), np.array(next_mask_batch)
