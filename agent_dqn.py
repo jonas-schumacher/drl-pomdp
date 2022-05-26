@@ -1,21 +1,21 @@
 import collections
 
 import numpy as np
-from scipy.special import softmax
 import torch
+from scipy.special import softmax
 
 from agent import OptimizedPlayer, copy_weights, calc_grad, GamePhase, AgentMode, calc_weight
-from simulation import Simulation
 from networks_dqn import DQNNetwork, DQNDueling, StateEstimator
 from networks_history import HistoryNet
 from replay_buffer import ExperienceBuffer, BiddingExperience, PlayingExperience, SupervisedExperience, PrioBuffer
+from simulation import Simulation
 
 
 def epsilon_decay_schedule(decay_type, total_steps, init_epsilon, min_epsilon, decay_share):
     """
     Calculate epsilon schedule in advance
     Base case: constant epsilon
-    :param decay_type:
+    :param decay_type: linear / exponential / exponential_skip
     :param total_steps:
     :param init_epsilon:
     :param min_epsilon:
@@ -547,7 +547,8 @@ class ModelPlayer(DQNPlayer):
                                                      seed=hps['env']['SEED'])
 
             self.certainty_queue = {}
-            self.certainty_queue = [collections.deque(maxlen=100) for _ in range(self.num_players * self.num_tricks_to_play)]
+            self.certainty_queue = [collections.deque(maxlen=100) for _ in
+                                    range(self.num_players * self.num_tricks_to_play)]
 
             self.mcts_count_total = 0
             self.mcts_count_mcts = 0
@@ -589,7 +590,6 @@ class ModelPlayer(DQNPlayer):
             torch.save(checkpoint, self.hps['model']['CHECKPOINT_HIST'] + "-" + current_time + ".pt")
         else:
             torch.save(checkpoint, self.hps['model']['CHECKPOINT'] + "-" + current_time + ".pt")
-
 
     def playing(self, current_trick, pos_in_trick, pos_in_bidding, playable_cards, action_mask,
                 trump_suit_index, follow_suit, bids, tricks, history, current_best_card):
@@ -739,8 +739,9 @@ class ModelPlayer(DQNPlayer):
                 sampled_state[:, self.hps['env']['GT_HAND'] + position_in_bidding] = \
                     self.env.ground_truth[:, self.hps['env']['GT_HAND'] + position_in_bidding]
                 sampled_state[:, self.hps['env']['GT_TRUMP']] = self.env.ground_truth[:, self.hps['env']['GT_TRUMP']]
-                sampled_state[:, self.hps['env']['GT_PLAYED']:self.hps['env']['GT_PLAYED']+self.num_players] = \
-                    self.env.ground_truth[:, self.hps['env']['GT_PLAYED']:self.hps['env']['GT_PLAYED']+self.num_players]
+                sampled_state[:, self.hps['env']['GT_PLAYED']:self.hps['env']['GT_PLAYED'] + self.num_players] = \
+                    self.env.ground_truth[:,
+                    self.hps['env']['GT_PLAYED']:self.hps['env']['GT_PLAYED'] + self.num_players]
                 # B2: The cards in the deck and the other players cards are sampled from a uniform distribution
                 cards_to_be_sampled = np.arange(self.num_cards)[np.sum(sampled_state, axis=1) == 0]
                 self.rng.shuffle(cards_to_be_sampled)
@@ -771,7 +772,8 @@ class ModelPlayer(DQNPlayer):
             # 3: Run multiple simulations with each possible action
             for alternative_action in playable_cards:
                 # Only perform simulations, if the playable card was actually sampled to the agent's hand:
-                if alternative_action in np.flatnonzero(sampled_state[:, self.hps['env']['GT_HAND'] + position_in_bidding]):
+                if alternative_action in np.flatnonzero(
+                        sampled_state[:, self.hps['env']['GT_HAND'] + position_in_bidding]):
                     for _ in range(self.hps['model']['SIMULATIONS_TO_RUN']):
                         reward_of_game = sim.run_simulation(sampled_state=sampled_state,
                                                             card_played=alternative_action)
@@ -799,7 +801,7 @@ class ModelPlayer(DQNPlayer):
         if self.master is None and self.hps['model']['SEARCH']:
             if len(self.mcts_rewards) > 0:
                 reward_array = np.array(self.mcts_rewards)
-                self.mcts_count_correct += np.sum(reward_array < reward+0.01)
+                self.mcts_count_correct += np.sum(reward_array < reward + 0.01)
                 if self.agent_mode == AgentMode.PLAY:
                     print("Overwrite Predictions = {} vs. Truth = {}".format(reward_array, reward))
                 self.mcts_rewards.clear()
@@ -811,10 +813,10 @@ class ModelPlayer(DQNPlayer):
             print("Final average loss: {}".format(np.round(self.loss_mean, decimals=6)))
         if self.master is None and self.hps['model']['SEARCH']:
             print("Total Decisions: {}".format(self.mcts_count_total))
-            share = self.mcts_count_mcts/self.mcts_count_total if self.mcts_count_total else 0
+            share = self.mcts_count_mcts / self.mcts_count_total if self.mcts_count_total else 0
             print("Thereof tested by MCTS: {} = {}%".format(
                 self.mcts_count_mcts,
-                np.round(100*share, 2)))
+                np.round(100 * share, 2)))
             share = self.mcts_count_overwritten / self.mcts_count_mcts if self.mcts_count_mcts else 0
             print("Thereof overwritten: {} = {}%".format(
                 self.mcts_count_overwritten,
@@ -823,7 +825,7 @@ class ModelPlayer(DQNPlayer):
             print("Thereof real reward at least as high: {} = {}%".format(
                 self.mcts_count_correct,
                 np.round(100 * share, 2)))
-            share = self.mcts_deviation/self.mcts_count_samples if self.mcts_count_samples else 0
+            share = self.mcts_deviation / self.mcts_count_samples if self.mcts_count_samples else 0
             print("{} samples drawn with mean deviation {}".format(
                 self.mcts_count_samples,
                 np.round(share, 2)))

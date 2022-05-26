@@ -9,6 +9,10 @@ from replay_buffer import ExperienceBuffer, SupervisedExperience
 
 
 class HistoryPlayer(OptimizedPlayer):
+    """
+    Player that learns a representation of the history using an LSTM network
+    """
+
     def __init__(self, identification, player_name, hps, master):
         super().__init__(identification, player_name, hps)
 
@@ -20,7 +24,8 @@ class HistoryPlayer(OptimizedPlayer):
             self.hist_output_dim_follow = self.num_suit * self.num_players
             self.hist_output_dim_winner = self.num_players
             assert self.hps['hist']['INPUT'] == self.num_cards + self.num_players + self.num_suit_including_none
-            assert self.hps['hist']['OUTPUT'] == self.hist_output_dim_cards + self.hist_output_dim_follow + self.hist_output_dim_winner
+            assert self.hps['hist'][
+                       'OUTPUT'] == self.hist_output_dim_cards + self.hist_output_dim_follow + self.hist_output_dim_winner
             self.history_net = HistoryNet(
                 input_dim=self.hps['hist']['INPUT'],
                 hidden_dim=self.hps['hist']['HIDDEN_SIZE'],
@@ -70,7 +75,9 @@ class HistoryPlayer(OptimizedPlayer):
                     prediction = prediction.numpy().flatten()
                     prediction = 1 / (1 + np.exp(-prediction))
                     cards_prediction = prediction[:self.hist_output_dim_cards].reshape(cards_target.shape)
-                    follow_prediction = prediction[self.hist_output_dim_cards:self.hist_output_dim_cards + self.hist_output_dim_follow].reshape(follow_target.shape)
+                    follow_prediction = prediction[
+                                        self.hist_output_dim_cards:self.hist_output_dim_cards + self.hist_output_dim_follow].reshape(
+                        follow_target.shape)
                     winner_prediction = prediction[self.hist_output_dim_cards + self.hist_output_dim_follow:]
                     print("Card prediction vs. truth {}: \n {}".format(
                         np.round(np.sum(np.abs(cards_prediction - cards_target)), decimals=1),

@@ -2,6 +2,10 @@ import numpy as np
 
 
 class Simulation:
+    """
+    Access to the environment used by ModelPlayer to simulate the end of each game round
+    """
+
     def __init__(self, env, current_trick, position_in_trick, position_in_bidding, history, hps):
         self.rng = np.random.default_rng(hps['env']['SEED'])
         self.env = env
@@ -105,7 +109,9 @@ class Simulation:
                     bids=self.env.bids[self.env.pos2id_bidding],
                     tricks=self.tricks[self.env.pos2id_bidding],
                     best=self.current_trick_winner_card)
-                card_played = self.env.players[self.env.hps['agent']['MASTER_INDEX']].playing_rollout.sample_masked_action(observation, action_mask)
+                card_played = self.env.players[
+                    self.env.hps['agent']['MASTER_INDEX']].playing_rollout.sample_masked_action(observation,
+                                                                                                action_mask)
             assert card_played >= 0
             assert card_played in playable_cards
 

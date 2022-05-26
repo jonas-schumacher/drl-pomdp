@@ -1,5 +1,6 @@
-import numpy as np
 from abc import ABC, abstractmethod
+
+import numpy as np
 
 
 class TrickTakingGame(ABC):
@@ -64,7 +65,7 @@ class TrickTakingGame(ABC):
     def create_cards(self):
         """
         Create a list of card names
-        :return:
+        :return: card names and symbols
         """
         card_names = np.empty(self.num_cards, dtype=object)
         card_symbols = np.empty(self.num_cards, dtype=object)
@@ -245,6 +246,7 @@ class TrickTakingGame(ABC):
         :param num_round:
         :return: normalized reward
         """
+
     @abstractmethod
     def denormalize_reward(self, reward, num_round):
         """
@@ -276,10 +278,10 @@ class TrickTakingGame(ABC):
             print("Trick {}: {}".format((n + 1),
                                         output[self.num_players * n:self.num_players * (n + 1)].flatten()))
 
-
     """
     Architecture A: return control at the end of the game round
     """
+
     def game_round(self, num_round, start_player_round):
         """
         Run a whole round of the game, consisting of bidding and playing phase
@@ -370,7 +372,8 @@ class TrickTakingGame(ABC):
         rewards_normalized = self.normalize_reward(reward=rewards, num_round=num_round)
         if self.print_statements:
             print("Bids / Tricks (in player order): {} / {}".format(self.bids, self.tricks))
-            print("Score Absolute / Normalized (in player order): {} / {}".format(np.round(rewards, 2), np.round(rewards_normalized, 2)))
+            print("Score Absolute / Normalized (in player order): {} / {}".format(np.round(rewards, 2),
+                                                                                  np.round(rewards_normalized, 2)))
 
         # Inform players about the final reward
         for i, p in enumerate(self.players):
@@ -632,7 +635,9 @@ class TrickTakingGame(ABC):
         self.playable_cards = np.flatnonzero(action_mask)
         assert len(self.playable_cards) >= 1
 
-        trick_current = self.history[self.num_players * self.current_trick:self.num_players * self.current_trick + self.current_player_position,:]
+        trick_current = self.history[
+                        self.num_players * self.current_trick:self.num_players * self.current_trick + self.current_player_position,
+                        :]
 
         # Ask a regular DQN player what to do in the current situation:
         dqn_player = self.players[self.hps['agent']['MASTER_INDEX']].get_next_player
@@ -747,7 +752,8 @@ class TrickTakingGame(ABC):
         reward_normalized = self.normalize_reward(reward=reward, num_round=self.num_round)
         if self.print_statements:
             print("Bids / Tricks (in player order): {} / {}".format(self.bids, self.tricks))
-            print("Score Absolute / Normalized (in player order): {} / {}".format(np.round(reward, 2), np.round(reward_normalized, 2)))
+            print("Score Absolute / Normalized (in player order): {} / {}".format(np.round(reward, 2),
+                                                                                  np.round(reward_normalized, 2)))
 
         # Inform players about the final reward
         # for i, p in enumerate(self.players):
@@ -755,7 +761,8 @@ class TrickTakingGame(ABC):
 
         # Return the results the MASTER player
         trick_last = self.history[self.num_players * (self.current_trick - 1):self.num_players * self.current_trick, :]
-        return trick_last, self.last_trick_winner, self.bids[self.pos2id_bidding], self.tricks[self.pos2id_bidding], reward[self.pos2id_bidding]
+        return trick_last, self.last_trick_winner, self.bids[self.pos2id_bidding], self.tricks[self.pos2id_bidding], \
+               reward[self.pos2id_bidding]
 
 
 class Spades(TrickTakingGame):
@@ -820,7 +827,7 @@ class Spades(TrickTakingGame):
         low = -num_round * self.REWARD_PER_BID
         high = num_round * self.REWARD_PER_BID
         # return (reward - low) / (high - low)  # [0,1]
-        return -1 + 2 * (reward - low) / (high - low)   # [-1,1]
+        return -1 + 2 * (reward - low) / (high - low)  # [-1,1]
 
     def denormalize_reward(self, reward, num_round):
         low = -num_round * self.REWARD_PER_BID
@@ -865,7 +872,8 @@ class OhHell(Spades):
                                          replace=False)
         trump_card = shuffled_cards[-1]
         self.ground_truth[trump_card, self.hps['env']['GT_DECK']] = 0  # Remove the trump card from the deck
-        self.ground_truth[trump_card, self.hps['env']['GT_TRUMP']] = 1  # Add the trump card the the cards played by nature
+        self.ground_truth[
+            trump_card, self.hps['env']['GT_TRUMP']] = 1  # Add the trump card the the cards played by nature
         self.trump_suit_index = self.suit_from_card[trump_card]
         if self.print_statements:
             print("Trump card {} [{}] with suit index {}".format(self.card_symbols[trump_card],
@@ -886,7 +894,7 @@ class OhHell(Spades):
         low = 0
         high = self.REWARD_FOR_CORRECT_PREDICTION + num_round * self.REWARD_PER_CORRECT_TRICK
         # return (reward - low) / (high - low)  # [0,1]
-        return -1 + 2 * (reward - low) / (high - low)   # [-1,1]
+        return -1 + 2 * (reward - low) / (high - low)  # [-1,1]
 
     def denormalize_reward(self, reward, num_round):
         low = 0
@@ -1072,7 +1080,7 @@ class Wizard(TrickTakingGame):
         low = num_round * self.REWARD_PER_WRONG_TRICK
         high = num_round * self.REWARD_PER_CORRECT_TRICK + self.REWARD_FOR_CORRECT_PREDICTION
         # return (reward - low) / (high - low)  # [0,1]
-        return -1 + 2 * (reward - low) / (high - low)   # [-1,1]
+        return -1 + 2 * (reward - low) / (high - low)  # [-1,1]
 
     def denormalize_reward(self, reward, num_round):
         low = num_round * self.REWARD_PER_WRONG_TRICK

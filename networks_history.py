@@ -7,6 +7,9 @@ import torch.nn as nn
 
 
 class HistoryNet(nn.Module):
+    """
+    LSTM network used by HistoryPlayer
+    """
 
     def __init__(self, input_dim, hidden_dim, output_dim, hps):
         super(HistoryNet, self).__init__()
@@ -36,9 +39,9 @@ class HistoryNet(nn.Module):
 
         self.preprocess = nn.Sequential(
             nn.Linear(in_features=input_dim,
-                      out_features=2*input_dim),
+                      out_features=2 * input_dim),
             nn.ReLU(),
-            nn.Linear(in_features=2*input_dim,
+            nn.Linear(in_features=2 * input_dim,
                       out_features=input_dim),
             nn.ReLU()
         )

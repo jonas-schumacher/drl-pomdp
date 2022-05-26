@@ -1,16 +1,17 @@
-import os
 import logging
-import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
-import yaml
+import os
 import time
 from datetime import datetime
 
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import yaml
+
 from agent import AgentMode, RandomPlayer, RuleBasedPlayer, HumanPlayer
-from environment import Wizard, Spades, OhHell
 from agent_dqn import DQNPlayer, ModelPlayer
 from agent_history import HistoryPlayer
+from environment import Wizard, Spades, OhHell
 
 
 def manipulate_hps(h):
@@ -140,6 +141,10 @@ def play(num_batches, num_games_per_batch, fix_start_player, train):
 
 
 def create_players():
+    """
+    Instantiate players based on parameters from hps_train.yaml file
+    :return:
+    """
     if PLAYER_TYPE == "RANDOM":  # all players play randomly
         algo = "random"
         players = [RandomPlayer(MASTER, PLAYER_NAMES[MASTER], hps, None)]
@@ -294,7 +299,6 @@ if __name__ == '__main__':
     if not os.path.exists("results"):
         os.makedirs("results")
 
-    # logging.basicConfig(level=logging.INFO, handlers=[])
     logger = logging.getLogger("trick")
     logger.setLevel(logging.INFO)
     console = logging.StreamHandler()

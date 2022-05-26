@@ -1,16 +1,15 @@
 import logging
+import time
 
 import numpy as np
 import yaml
-import time
-
 from matplotlib import pyplot as plt
-from tqdm import tqdm
 
 from agent import AgentMode, RuleBasedPlayer, RandomPlayer
-from environment import Wizard
 from agent_dqn import DQNPlayer
+from environment import Wizard
 from training import manipulate_hps
+
 
 def create_players(hps):
     if PLAYER_TYPE == "RANDOM":
@@ -79,6 +78,7 @@ def create_players(hps):
     players[NUM_PLAYERS - 1].set_next_player(players[0])
 
     return players
+
 
 def play_whole_game(hps, start_player_index):
     overall_reward = np.zeros(NUM_PLAYERS, dtype=float)
@@ -158,9 +158,10 @@ if __name__ == '__main__':
         winning_probs[game, :] = current_winning_probs
         if (game + 1) % (num_games_to_play / 100) == 0:
             logger.info(f"{game + 1} / {win_count}: {np.round(100 * current_winning_probs, decimals=2)}")
+            logger.info(f"{game + 1} / {win_count}: {winning_count}")
     logger.info(f"Final winning probs: {np.round(100 * winning_count / win_count, decimals=2)}")
-
-    fig, ax = plt.subplots()  # create a new figure
+    logger.info(f"Final winning count: {winning_count}")
+    fig, ax = plt.subplots()
     for i in range(NUM_PLAYERS):
         ax.plot(winning_probs[:, i],
                 label=f"Player {PLAYER_NAMES[i]}",

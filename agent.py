@@ -1,6 +1,7 @@
-import numpy as np
 from abc import abstractmethod, ABCMeta
 from enum import Enum
+
+import numpy as np
 
 
 def calc_weight(net):
@@ -17,7 +18,7 @@ def calc_weight(net):
 def calc_grad(net):
     """
     Calculate the norm of the parameters of a neural network
-    :param net:
+    :param net: neural network
     :return:
     """
     grads = np.concatenate([p.grad.data.cpu().numpy().flatten()
@@ -199,6 +200,7 @@ class HumanPlayer(Player):
     def __init__(self, identification, player_name, hps, master):
         super().__init__(identification, player_name, hps)
         self.last_tricks = None
+
     # def __repr__(self):
     #     return super().__repr__() + "(Human)"
 
@@ -206,8 +208,8 @@ class HumanPlayer(Player):
         wait_for_input = True
         user_action = 0
         print("You ({}) hold cards {} and see bids {}".format(str(self),
-                                                                  self.env.card_names[self.hand],
-                                                                  bids))
+                                                              self.env.card_names[self.hand],
+                                                              bids))
         while wait_for_input:
             try:
                 user_action = int(input("Enter a bid from {}: ".format(np.arange(0, self.num_tricks_to_play + 1))))
@@ -225,10 +227,13 @@ class HumanPlayer(Player):
         if current_trick == 0:
             print("Final bidding is {}".format(bids))
         else:
-            position = np.flatnonzero(tricks-self.last_tricks)[0]
+            position = np.flatnonzero(tricks - self.last_tricks)[0]
             print("Last trick: {} played by: {} went to: {}".format(
-                self.env.card_names[history[position_in_history - pos_in_trick - self.num_players:position_in_history - pos_in_trick, 0]],
-                [self.env.players[i] for i in history[position_in_history - pos_in_trick - self.num_players:position_in_history - pos_in_trick, 1]],
+                self.env.card_names[
+                    history[position_in_history - pos_in_trick - self.num_players:position_in_history - pos_in_trick,
+                    0]],
+                [self.env.players[i] for i in
+                 history[position_in_history - pos_in_trick - self.num_players:position_in_history - pos_in_trick, 1]],
                 self.env.players[self.env.pos2id_bidding[position]]
             ))
         self.last_tricks = tricks
@@ -236,8 +241,9 @@ class HumanPlayer(Player):
               .format(str(self),
                       self.env.card_names[self.hand],
                       tricks,
-                      self.env.card_names[history[position_in_history-pos_in_trick:position_in_history, 0]],
-                      [self.env.players[i] for i in history[position_in_history-pos_in_trick:position_in_history, 1]]))
+                      self.env.card_names[history[position_in_history - pos_in_trick:position_in_history, 0]],
+                      [self.env.players[i] for i in
+                       history[position_in_history - pos_in_trick:position_in_history, 1]]))
         wait_for_input = True
         user_action = 0
         while wait_for_input:
@@ -319,15 +325,15 @@ class RuleBasedPlayer(Player):
     def bidding(self, pos_in_bidding, trump_suit_index, bids):
         # Probability of one card to beat another if played first / second
         wins_if_played_first = 1 - np.sum(self.env.card_order[trump_suit_index], axis=1) / self.num_cards
-        wins_if_played_second = np.sum(self.env.card_order[trump_suit_index], axis=0)/self.num_cards
+        wins_if_played_second = np.sum(self.env.card_order[trump_suit_index], axis=0) / self.num_cards
         # Probability to beat one other card independent of position
         self.winning_probs = (wins_if_played_first + wins_if_played_second) / 2
         # Probability to beat NUM_PLAYERS-1 other cards
-        self.winning_probs = np.power(self.winning_probs, self.num_players-1)
+        self.winning_probs = np.power(self.winning_probs, self.num_players - 1)
         # Normalize probs to sum up to 1
-        self.winning_probs = self.winning_probs/self.winning_probs.sum()
+        self.winning_probs = self.winning_probs / self.winning_probs.sum()
         # Normalize probs so that each card has a value of 1/self.num_players
-        self.winning_probs = self.winning_probs*self.num_cards/self.num_players
+        self.winning_probs = self.winning_probs * self.num_cards / self.num_players
         # Simply sum up over all cards in the hand
         hand_valuation = np.sum(self.winning_probs[self.hand])
         action = int(np.round(hand_valuation, 0))

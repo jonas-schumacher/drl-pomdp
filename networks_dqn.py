@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import numpy as np
 
 """
 ---------------------------- DQN Network for Both Bidding and Playing ----------------------------
@@ -10,7 +9,7 @@ import numpy as np
 class DQNNetwork(nn.Module):
     """
     This class models the DQN network which assigns a value to all possible actions the agent can take
-    Being a value-based method, the agent then simply picks the highest-valued action
+    Being a value-based method, the agent simply picks the highest-valued action
     """
 
     def __init__(self, num_inputs, num_actions, hidden, do_history_preprocessing, hps):
@@ -106,7 +105,6 @@ class DQNNetwork(nn.Module):
 
         return action, torch.max(q_values_masked).item()
 
-
     @torch.no_grad()
     def get_max_value_masked(self, obs_batch, action_mask_batch):
         """
@@ -149,6 +147,7 @@ class DQNNetwork(nn.Module):
         q_values_masked = q_values[mask]
 
         return q_values_masked.numpy()
+
 
 """
 ---------------------------- DQN WITH DUELING ARCHITECTURE ----------------------------
@@ -205,6 +204,7 @@ class StateEstimator(DQNNetwork):
     """
     Use same architecture and forward-method as base class
     """
+
     def __init__(self, num_inputs, num_estimations, hidden, do_history_preprocessing, hps):
         super(StateEstimator, self).__init__(num_inputs, num_estimations, hidden, do_history_preprocessing, hps)
 

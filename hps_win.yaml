@@ -1,4 +1,3 @@
-
 env:
   GAME_TO_PLAY: "WIZARD"
   SUIT: 4
@@ -13,18 +12,18 @@ env:
   NORMALIZE_REWARD: False
 
 agent:
-  PLAYER_TYPE: "DQN"
+  PLAYER_TYPE: "DQN1_RULE3"
   TRAINING_MODE: True
   READ_CHECKPOINTS: True
   WRITE_CHECKPOINTS: True
   BATCHES: 100
-  ITERATIONS_PER_BATCH: 100
+  ITERATIONS_PER_BATCH: 10
   BATCHES_TOURNAMENT: 1
-  ITERATIONS_PER_BATCH_TOURNAMENT: 1000
+  ITERATIONS_PER_BATCH_TOURNAMENT: 10000
   EVALUATION_GAMES: 1
   GAMMA: 1
-  REPLAY_START: 0.1 # Start training after buffer is filled to 10%
-  REPLAY_FULL: 0.3 # Buffer should be full after less than 30% of total experiences
+  REPLAY_START: 0.1
+  REPLAY_FULL: 0.3
   MASTER_INDEX: 0
 
 dqn:
@@ -34,20 +33,20 @@ dqn:
   BATCH_SIZE_PLAYING: 1024
   MAX_REPLAY_SIZE_BIDDING: 300000
   MAX_REPLAY_SIZE_PLAYING: 600000
-  HIDDEN_BIDDING: [100,100,50]
-  HIDDEN_PLAYING: [200,200,100]
-  TRAIN_INTERVAL: 10  # Games to skip between updates of playing / bidding
-  COPY_TARGET: 20  # Games to skip between copy weights from trained net to target net
-  TAU_TARGET: 0.1  # If None, overwrite network weights completely
+  HIDDEN_BIDDING: [ 100,100,50 ]
+  HIDDEN_PLAYING: [ 200,200,100 ]
+  TRAIN_INTERVAL: 10
+  COPY_TARGET: 20
+  TAU_TARGET: 0.1
   eps:
-    STRATEGY_BIDDING: "exponential"  # type of decay: constant, linear, exponential
+    STRATEGY_BIDDING: "exponential"
     STRATEGY_PLAYING: "exponential"
-    START: 1.0  # start with high epsilon = exploration (1.0 = random strategy)
-    FINAL: 0.01  # end with low epsilon = exploitation (improve convergence)
-    SHARE: 0.9  # percentage of experience until final epsilon is reached
-  DOUBLE: False  # Double DQN
-  DUELING: False  # Dueling Architecture
-  PER: False  # Prioritized Replay Buffer
+    START: 1.0
+    FINAL: 0.01
+    SHARE: 0.9
+  DOUBLE: False
+  DUELING: False
+  PER: False
 
 hist:
   LR: 0.005
@@ -60,11 +59,11 @@ model:
   LR: 0.001
   BATCH_SIZE: 1024
   MAX_REPLAY_SIZE: 600000
-  HIDDEN: [200,200,300]
+  HIDDEN: [ 200,200,300 ]
   TRAIN_INTERVAL: 10
   SEARCH: True
   CERTAINTY: 0.0
-  SAMPLING_TYPE: "TRUTH"  # TRUTH, UNIFORM, SAMPLE
-  SAMPLES_TO_GENERATE: 1  # only relevant for SAMPLING_TYPE = SAMPLE
+  SAMPLING_TYPE: "TRUTH"
+  SAMPLES_TO_GENERATE: 1
   SIMULATIONS_TO_RUN: 1
-  RANDOM_POLICY: False  # True = use random rollout policy, False = use DQN rollout policy
+  RANDOM_POLICY: False
