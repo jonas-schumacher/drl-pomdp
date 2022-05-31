@@ -1,5 +1,5 @@
 # DRL for trick-taking games
-In this project **Deep Reinforcement Learning (DRL)** is used to optimize **Partially Observable Markov Decision Processes (POMDP)**. 
+In this project, **Deep Reinforcement Learning (DRL)** is used to optimize **Partially Observable Markov Decision Processes (POMDP)**. 
 The environment constitutes a flexible and scalable trick-taking game, which allows the card games *Spades*, *Oh Hell* and *Wizard* to be analyzed and optimized.
 
 ## Learning agents
